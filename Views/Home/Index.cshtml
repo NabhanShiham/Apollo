@@ -1,4 +1,5 @@
-﻿@{
+﻿
+@{
     ViewData["Title"] = "Home Page";
 }
 
@@ -6,7 +7,7 @@
     @if (User.Identity?.IsAuthenticated == true)
     {
         <h1 class="display-4">Dashboard</h1>
-        <p class="font-mono">Count of Books in system || Count of Books Loaned || Friend Notifications</p>
+        <p class="font-mono">Available Books: @ViewBag.countOfAvailableBooks || Count of Books Loaned: @ViewBag.countOfLoanedBooks || Friend Notifications: </p>
     }
 
     @if (User.Identity?.IsAuthenticated != true)

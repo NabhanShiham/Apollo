@@ -291,3 +291,4 @@
 /Users/nabhan/Documents/NETProjects/Apollo/obj/Debug/net9.0/Apollo.pdb
 /Users/nabhan/Documents/NETProjects/Apollo/obj/Debug/net9.0/Apollo.genruntimeconfig.cache
 /Users/nabhan/Documents/NETProjects/Apollo/obj/Debug/net9.0/ref/Apollo.dll
+/Users/nabhan/Documents/NETProjects/Apollo/obj/Debug/net9.0/Apollo.sourcelink.json
