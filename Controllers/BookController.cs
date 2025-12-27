@@ -5,6 +5,7 @@ using Apollo.Data;
 using Apollo.Entities;
 using Apollo.Models;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Apollo.Controllers
 {
@@ -133,5 +134,47 @@ namespace Apollo.Controllers
             TempData["SuccessMessage"] = $"Book '{book.Name}' marked as {(book.IsBorrowed ? "borrowed" : "available")}!";
             return RedirectToAction(nameof(Index));
         }
+
+        [HttpGet]
+        public async Task<IActionResult> Search(string query, int page = 1)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                return RedirectToAction(nameof(Index));
+            }
+
+            string cleanedQuery = query.Trim();
+
+            ViewBag.CurrentFilter = cleanedQuery;
+
+            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            int pageSize = 10;
+
+            List<Book>? results = await _context.Books
+                .Where(e => e.Name.Contains(cleanedQuery))
+                .Where(e => e.OwnerId == userId)
+                .OrderBy(e => e.Name)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            Int32 totalItems = await _context.Books
+                .Where(e =>
+                e.Name.Contains(cleanedQuery))
+                .Where(e =>
+                e.OwnerId == userId)
+                .CountAsync();
+
+            var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
+            ViewBag.CurrentPage = page;
+            ViewBag.TotalItems = totalItems;
+            ViewBag.Results = results;
+            ViewBag.TotalPages = totalPages;
+
+            return View("Index", results);
+        }
+
     }
 }
