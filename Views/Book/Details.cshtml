@@ -1,0 +1,963 @@
+﻿@model Apollo.Entities.Book
+
+@{
+    ViewData["Title"] = Model.Name + " - Details";
+    var fileExtension = System.IO.Path.GetExtension(Model.FilePath)?.ToLower();
+    var isEpub = fileExtension == ".epub";
+    var isPdf = fileExtension == ".pdf";
+
+    // Store these values in data attributes for JavaScript access
+    var fileTypeData = isEpub ? "epub" : (isPdf ? "pdf" : "none");
+}
+
+<div class="container-fluid py-4">
+    <!-- Back Button -->
+    <div class="mb-4">
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Library
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- Left Column: Book Cover and Actions -->
+        <div class="col-md-4 col-lg-3 mb-4">
+            <div class="card shadow-sm border-0">
+                <!-- Book Cover -->
+                <div class="book-cover-container-lg">
+                    @if (!string.IsNullOrEmpty(Model.PhotoPath))
+                    {
+                        <img src="@Url.Content($"~/{Model.PhotoPath}")" class="card-img-top book-cover-lg" alt="@Model.Name">
+                    }
+                    else
+                    {
+                        <div class="book-cover-placeholder-lg d-flex align-items-center justify-content-center">
+                            <i class="bi bi-book fs-1 text-muted"></i>
+                        </div>
+                    }
+
+                    <!-- Status Badge -->
+                    <span class="position-absolute top-0 end-0 m-3 badge @(Model.IsBorrowed ? "bg-warning" : "bg-success")">
+                        @(Model.IsBorrowed ? "Borrowed" : "Available")
+                    </span>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card-body">
+                    <h5 class="card-title">Quick Actions</h5>
+                    <div class="d-grid gap-2">
+                        <!-- Toggle Reader Button -->
+                        @if (!string.IsNullOrEmpty(Model.FilePath))
+                        {
+                            <button class="btn btn-primary btn-lg" id="toggleReaderBtn" data-file-type="@fileTypeData">
+                                <i class="bi bi-book"></i>
+                                <span id="readerBtnText">Open Reader</span>
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-secondary btn-lg" disabled>
+                                <i class="bi bi-book"></i> No Book File
+                            </button>
+                        }
+
+                        <!-- Download Button -->
+                        @if (!string.IsNullOrEmpty(Model.FilePath))
+                        {
+                            <a asp-action="Download" asp-controller="Book" asp-route-id="@Model.Id" class="btn btn-outline-primary">
+                                <i class="bi bi-download"></i> Download
+                            </a>
+                        }
+
+                        <!-- Edit Button (Triggers Modal) -->
+                        <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editBookModal">
+                            <i class="bi bi-pencil"></i> Edit Details
+                        </button>
+
+                        <!-- Toggle Status Form -->
+                        <form method="post" asp-action="ToggleStatus" asp-route-id="@Model.Id" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn @(Model.IsBorrowed ? "btn-success" : "btn-warning")">
+                                <i class="bi @(Model.IsBorrowed ? "bi-check-circle" : "bi-arrow-left-right")"></i>
+                                @(Model.IsBorrowed ? "Mark Returned" : "Mark Borrowed")
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Metadata -->
+                    <div class="mt-4 pt-3 border-top">
+                        <small class="text-muted d-block">
+                            <i class="bi bi-calendar"></i> Added: @Model.CreatedAt.ToString("MMM dd, yyyy")
+                        </small>
+                        @if (Model.UpdatedAt != DateTime.MinValue)
+                        {
+                            <small class="text-muted d-block">
+                                <i class="bi bi-clock-history"></i> Updated: @Model.UpdatedAt.ToString("MMM dd, yyyy")
+                            </small>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Book Details -->
+        <div class="col-md-8 col-lg-9">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <!-- Book Title -->
+                    <h1 class="display-6 fw-bold mb-3">@Model.Name</h1>
+
+                    <!-- File Info -->
+                    @if (!string.IsNullOrEmpty(Model.FilePath))
+                    {
+                        <div class="alert alert-info mb-4">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-file-earmark-text fs-4 me-3"></i>
+                                <div>
+                                    <h6 class="mb-0">Book File Available</h6>
+                                    <small>Format: @fileExtension?.TrimStart('.')?.ToUpper()</small>
+                                    @if (isEpub)
+                                    {
+                                        <br />
+                                
+                                        <small class="text-muted">EPUB format - Readable in browser</small>
+                                    }
+                                    else if (isPdf)
+                                    {
+                                        <br />
+                                
+                                        <small class="text-muted">PDF format - Readable in browser</small>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Description -->
+                    <div class="mb-5">
+                        <h5 class="fw-semibold mb-3">Description</h5>
+                        <p class="lead">@Model.Description</p>
+                    </div>
+
+                    <!-- Book Reader Section -->
+                    @if (!string.IsNullOrEmpty(Model.FilePath))
+                    {
+                        <div class="card mb-4 border-primary" id="readerSection" style="display: none;">
+                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i class="bi bi-book"></i> Reading: @Model.Name</h5>
+                                <div>
+                                    <button type="button" class="btn btn-sm btn-outline-light me-2" id="toggleFullscreenBtn">
+                                        <i class="bi bi-arrows-fullscreen"></i>
+                                    </button>
+                                    @if (isEpub)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-light me-2" id="themeToggleBtn">
+                                            <i class="bi bi-moon"></i>
+                                        </button>
+                                    }
+                                    <button type="button" class="btn-close btn-close-white" id="closeReaderBtn"></button>
+                                </div>
+                            </div>
+                            <div class="card-body p-0">
+                                <!-- Reader Controls -->
+                                <div class="bg-light py-2 px-3 border-bottom d-flex justify-content-between align-items-center">
+                                    <div>
+                                        @if (isEpub)
+                                        {
+                                            <button class="btn btn-sm btn-outline-secondary me-2" id="prevBtn" disabled>
+                                                <i class="bi bi-chevron-left"></i> Previous
+                                            </button>
+                                            <span class="mx-2" id="pageInfo">Ready to load</span>
+                                            <button class="btn btn-sm btn-outline-secondary ms-2" id="nextBtn" disabled>
+                                                Next <i class="bi bi-chevron-right"></i>
+                                            </button>
+                                        }
+                                        else if (isPdf)
+                                        {
+                                            <button class="btn btn-sm btn-outline-secondary me-2" id="pdfPrevBtn" disabled>
+                                                <i class="bi bi-chevron-left"></i> Previous
+                                            </button>
+                                            <span class="mx-2" id="pdfPageInfo">Page: <span id="pdfCurrentPage">1</span> of <span id="pdfTotalPages">-</span></span>
+                                            <button class="btn btn-sm btn-outline-secondary ms-2" id="pdfNextBtn" disabled>
+                                                Next <i class="bi bi-chevron-right"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        @if (isEpub)
+                                        {
+                                            <div class="input-group input-group-sm me-3" style="width: 150px;">
+                                                <span class="input-group-text">Size</span>
+                                                <select class="form-select" id="fontSizeSelect">
+                                                    <option value="100%">Normal</option>
+                                                    <option value="120%">Large</option>
+                                                    <option value="140%">X-Large</option>
+                                                </select>
+                                            </div>
+                                        }
+                                        else if (isPdf)
+                                        {
+                                            <div class="input-group input-group-sm me-3" style="width: 150px;">
+                                                <span class="input-group-text">Zoom</span>
+                                                <select class="form-select" id="pdfZoomSelect">
+                                                    <option value="100%">100%</option>
+                                                    <option value="125%">125%</option>
+                                                    <option value="150%">150%</option>
+                                                    <option value="200%">200%</option>
+                                                    <option value="auto">Auto Fit</option>
+                                                </select>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+
+                                <!-- Reader Container -->
+                                <div id="bookReader" style="height: 600px; position: relative;"></div>
+
+                                <!-- Loading Indicator -->
+                                <div id="readerLoading" class="text-center py-5" style="display: none;">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2 text-muted">Loading book...</p>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Book Statistics -->
+                    <div class="row mt-5">
+                        <div class="col-md-4">
+                            <div class="card bg-light border-0">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-eye fs-1 text-primary"></i>
+                                    <h3 class="mt-2">--</h3>
+                                    <small class="text-muted">Views</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light border-0">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-clock fs-1 text-success"></i>
+                                    <h3 class="mt-2">--</h3>
+                                    <small class="text-muted">Reading Time</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light border-0">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-bookmark fs-1 text-warning"></i>
+                                    <h3 class="mt-2">--</h3>
+                                    <small class="text-muted">Last Read</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Book Modal -->
+<div class="modal fade" id="editBookModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">✏️ Edit Book</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <form method="post" asp-action="Edit" enctype="multipart/form-data" id="editBookForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Id" value="@Model.Id" />
+
+                <div class="modal-body">
+                    <!-- Book Name -->
+                    <div class="mb-3">
+                        <label for="editBookName" class="form-label">Book Title *</label>
+                        <input type="text" class="form-control" id="editBookName" name="Name"
+                               value="@Model.Name" required maxlength="100">
+                        <div class="form-text">Maximum 100 characters</div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-3">
+                        <label for="editBookDescription" class="form-label">Description *</label>
+                        <textarea class="form-control" id="editBookDescription" name="Description"
+                                  rows="3" required maxlength="500">@Model.Description</textarea>
+                        <div class="form-text">Maximum 500 characters</div>
+                        <div class="d-flex justify-content-end">
+                            <small class="text-muted"><span id="editCharCount">@Model.Description.Length</span>/500</small>
+                        </div>
+                    </div>
+
+                    <!-- Photo Upload -->
+                    <div class="mb-3">
+                        <label for="editBookPhoto" class="form-label">Book Cover</label>
+                        <input type="file" class="form-control" id="editBookPhoto" name="PhotoFile"
+                               accept=".jpg,.jpeg,.png,.gif">
+                        <div class="form-text">Leave empty to keep current cover</div>
+
+                        <!-- Current Image -->
+                        @if (!string.IsNullOrEmpty(Model.PhotoPath))
+                        {
+                            <div class="mt-3">
+                                <p class="text-muted mb-1">Current Cover:</p>
+                                <img src="@Url.Content($"~/{Model.PhotoPath}")" class="img-thumbnail" style="max-height: 100px;">
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Book File Upload -->
+                    <div class="mb-3">
+                        <label for="editBookFile" class="form-label">Replace Book File</label>
+                        <input type="file" class="form-control" id="editBookFile" name="BookFile"
+                               accept=".epub, .pdf">
+                        <div class="form-text">Accepted formats: EPUB, PDF</div>
+                        @if (!string.IsNullOrEmpty(Model.FilePath))
+                        {
+                            <div class="alert alert-warning mt-2">
+                                <small>
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    Uploading a new file will replace the existing one.
+                                </small>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveChangesBtn">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .book-cover-container-lg {
+            height: 400px;
+            overflow: hidden;
+            position: relative;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+
+        .book-cover-lg {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .book-cover-placeholder-lg {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+
+        #bookReader {
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            overflow: auto;
+        }
+
+        /* Fullscreen styles */
+        #readerSection.fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1050;
+            margin: 0;
+            border-radius: 0;
+        }
+
+            #readerSection.fullscreen #bookReader {
+                height: calc(100vh - 120px);
+            }
+
+            #readerSection.fullscreen .card-header {
+                border-radius: 0;
+            }
+
+        /* PDF viewer specific */
+        .pdf-container {
+            width: 100%;
+            height: 100%;
+        }
+
+        .pdf-page {
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+        }
+
+        /* Reader controls */
+        .reader-controls {
+            transition: all 0.3s ease;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        let book = null;
+        let rendition = null;
+        let isDarkTheme = false;
+        let isFullscreen = false;
+        let isReaderOpen = false;
+        let pdfDoc = null;
+        let pdfCurrentPage = 1;
+        let pdfRendering = false;
+        let pdfPageNumPending = null;
+        let pdfScale = 1.0;
+        let fileType = "";
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const toggleReaderBtn = document.getElementById('toggleReaderBtn');
+            if (toggleReaderBtn) {
+                fileType = toggleReaderBtn.getAttribute('data-file-type');
+            }
+
+            const editDescription = document.getElementById('editBookDescription');
+            if (editDescription) {
+                editDescription.addEventListener('input', function () {
+                    const charCount = this.value.length;
+                    const charCountElement = document.getElementById('editCharCount');
+                    if (charCountElement) {
+                        charCountElement.textContent = charCount;
+                    }
+                    if (charCount > 500) {
+                        this.value = this.value.substring(0, 500);
+                        if (charCountElement) {
+                            charCountElement.textContent = 500;
+                        }
+                    }
+                });
+            }
+
+            if (toggleReaderBtn) {
+                toggleReaderBtn.addEventListener('click', toggleReader);
+            }
+
+            const closeReaderBtn = document.getElementById('closeReaderBtn');
+            if (closeReaderBtn) {
+                closeReaderBtn.addEventListener('click', closeReader);
+            }
+
+            const toggleFullscreenBtn = document.getElementById('toggleFullscreenBtn');
+            if (toggleFullscreenBtn) {
+                toggleFullscreenBtn.addEventListener('click', toggleFullscreen);
+            }
+
+            const themeToggleBtn = document.getElementById('themeToggleBtn');
+            if (themeToggleBtn) {
+                themeToggleBtn.addEventListener('click', toggleTheme);
+            }
+
+            const prevBtn = document.getElementById('prevBtn');
+            if (prevBtn) {
+                prevBtn.addEventListener('click', prevPage);
+            }
+
+            const nextBtn = document.getElementById('nextBtn');
+            if (nextBtn) {
+                nextBtn.addEventListener('click', nextPage);
+            }
+
+            const pdfPrevBtn = document.getElementById('pdfPrevBtn');
+            if (pdfPrevBtn) {
+                pdfPrevBtn.addEventListener('click', pdfPrevPage);
+            }
+
+            const pdfNextBtn = document.getElementById('pdfNextBtn');
+            if (pdfNextBtn) {
+                pdfNextBtn.addEventListener('click', pdfNextPage);
+            }
+
+            const fontSizeSelect = document.getElementById('fontSizeSelect');
+            if (fontSizeSelect) {
+                fontSizeSelect.addEventListener('change', changeFontSize);
+            }
+
+            const pdfZoomSelect = document.getElementById('pdfZoomSelect');
+            if (pdfZoomSelect) {
+                pdfZoomSelect.addEventListener('change', changePdfZoom);
+            }
+
+            const editForm = document.getElementById('editBookForm');
+            if (editForm) {
+                editForm.addEventListener('submit', function (e) {
+                    const submitBtn = document.getElementById('saveChangesBtn');
+                    if (submitBtn) {
+                        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Saving...';
+                        submitBtn.disabled = true;
+                    }
+                });
+            }
+
+            setTimeout(function () {
+                const alerts = document.querySelectorAll('.alert');
+                alerts.forEach(alert => {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                });
+            }, 5000);
+
+            document.addEventListener('keydown', function (e) {
+                if (!isReaderOpen) return;
+
+                if (e.key === 'ArrowLeft') {
+                    if (fileType === 'epub') prevPage();
+                    else if (fileType === 'pdf') pdfPrevPage();
+                    e.preventDefault();
+                } else if (e.key === 'ArrowRight') {
+                    if (fileType === 'epub') nextPage();
+                    else if (fileType === 'pdf') pdfNextPage();
+                    e.preventDefault();
+                } else if (e.key === 'Escape' && isFullscreen) {
+                    toggleFullscreen();
+                } else if (e.key === 'Escape') {
+                    closeReader();
+                }
+            });
+
+            document.addEventListener('fullscreenchange', handleFullscreenChange);
+            document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+            document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+            document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+        });
+
+        function toggleReader() {
+            if (!isReaderOpen) {
+                openReader();
+            } else {
+                closeReader();
+            }
+        }
+
+        async function openReader() {
+            const readerSection = document.getElementById('readerSection');
+            const readerBtnText = document.getElementById('readerBtnText');
+
+            readerSection.style.display = 'block';
+            readerBtnText.textContent = 'Close Reader';
+            isReaderOpen = true;
+
+            readerSection.scrollIntoView({ behavior: 'smooth' });
+
+            if (fileType === 'epub') {
+                await loadEpub();
+            } else if (fileType === 'pdf') {
+                await loadPdf();
+            }
+        }
+
+        function closeReader() {
+            const readerSection = document.getElementById('readerSection');
+            const readerBtnText = document.getElementById('readerBtnText');
+
+            readerSection.style.display = 'none';
+            readerBtnText.textContent = 'Open Reader';
+            isReaderOpen = false;
+
+            if (fileType === 'epub') {
+                if (rendition) {
+                    rendition.destroy();
+                    rendition = null;
+                }
+                if (book) {
+                    book.destroy();
+                    book = null;
+                }
+            } else if (fileType === 'pdf') {
+                pdfDoc = null;
+                const bookReader = document.getElementById('bookReader');
+                bookReader.innerHTML = '';
+            }
+
+            if (isFullscreen) {
+                exitFullscreen();
+            }
+        }
+
+        async function loadEpub() {
+            const readerLoading = document.getElementById('readerLoading');
+            const bookReader = document.getElementById('bookReader');
+            const pageInfo = document.getElementById('pageInfo');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+
+            try {
+                readerLoading.style.display = 'block';
+                bookReader.innerHTML = '';
+                pageInfo.textContent = 'Loading...';
+                if (prevBtn) prevBtn.disabled = true;
+                if (nextBtn) nextBtn.disabled = true;
+
+                 if (typeof JSZip === 'undefined') {
+                    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js');
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                }
+
+                if (typeof ePub === 'undefined') {
+                    await loadScript('/lib/epub-js/epub.min.js');
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+
+                const response = await fetch(`/Books/GetEpubUrl/@Model.Id`);
+                if (!response.ok) {
+                    throw new Error('Failed to get EPUB URL');
+                }
+
+                const data = await response.json();
+                const epubUrl = data.url;
+                console.log('Loading EPUB from:', epubUrl);
+
+                if (typeof ePub === 'undefined') {
+                    throw new Error('EPUB.js library failed to load');
+                }
+
+                book = ePub(epubUrl);
+
+                rendition = book.renderTo("bookReader", {
+                    width: "100%",
+                    height: "100%",
+                    flow: "paginated",
+                    spread: "none"
+                });
+
+                await rendition.display();
+
+                rendition.themes.register("dark", {
+                    "body": {
+                        "background": "#1a1a1a",
+                        "color": "#ffffff"
+                    },
+                    "a": {
+                        "color": "#4dabf7"
+                    }
+                });
+
+                rendition.themes.default({
+                    "body": {
+                        "background": "#ffffff",
+                        "color": "#000000",
+                        "font-size": "18px",
+                        "line-height": "1.6",
+                        "padding": "20px"
+                    }
+                });
+
+                rendition.themes.fontSize("100%");
+
+                rendition.on("relocated", function (location) {
+                    if (location && location.start) {
+                        const percentage = Math.round(location.start.percentage * 100);
+                        pageInfo.textContent = `Page ${percentage}%`;
+                    }
+                });
+
+                if (prevBtn) prevBtn.disabled = false;
+                if (nextBtn) nextBtn.disabled = false;
+
+                readerLoading.style.display = 'none';
+                pageInfo.textContent = 'Ready';
+
+                console.log('EPUB loaded successfully');
+
+            } catch (error) {
+                console.error('Error loading EPUB:', error);
+                if (readerLoading) readerLoading.style.display = 'none';
+                bookReader.innerHTML = `
+                    <div class="alert alert-danger m-3">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Error loading book: ${error.message}
+                    </div>
+                    <div class="text-center p-3">
+                        <a href="/Book/Download/@Model.Id" class="btn btn-primary" download>
+                            <i class="bi bi-download"></i> Download Instead
+                        </a>
+                    </div>
+                `;
+                if (pageInfo) pageInfo.textContent = 'Error loading book';
+            }
+        }
+
+        async function loadPdf() {
+            const readerLoading = document.getElementById('readerLoading');
+            const bookReader = document.getElementById('bookReader');
+            const pdfCurrentPageElement = document.getElementById('pdfCurrentPage');
+            const pdfTotalPagesElement = document.getElementById('pdfTotalPages');
+            const pdfPrevBtn = document.getElementById('pdfPrevBtn');
+            const pdfNextBtn = document.getElementById('pdfNextBtn');
+
+            try {
+                // Show loading
+                readerLoading.style.display = 'block';
+                bookReader.innerHTML = '';
+
+                // Create canvas for PDF rendering
+                const pdfCanvas = document.createElement('canvas');
+                pdfCanvas.className = 'pdf-canvas';
+                bookReader.appendChild(pdfCanvas);
+                const pdfCtx = pdfCanvas.getContext('2d');
+
+                if (typeof pdfjsLib === 'undefined') {
+                    try {
+                        console.log('Trying to load PDF.js as ES module...');
+                        const pdfjsModule = await import('/lib/pdf.js/pdf.mjs');
+                        window.pdfjsLib = pdfjsModule;
+
+                        try {
+                            await import('/lib/pdf.js/pdf.worker.mjs');
+                            console.log('PDF.js worker loaded as ES module');
+                        } catch (workerError) {
+                            console.warn('Could not load PDF worker as ES module:', workerError);
+                        }
+                    } catch (moduleError) {
+                        console.warn('ES module import failed, trying traditional script...', moduleError);
+
+                        await loadScript('/lib/pdf.js/pdf.min.js');
+
+                        if (typeof pdfjsLib !== 'undefined') {
+                            pdfjsLib.GlobalWorkerOptions.workerSrc = '/lib/pdf.js/pdf.worker.min.js';
+                        }
+                    }
+
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+
+                const response = await fetch(`/Books/GetEpubUrl/@Model.Id`);
+                if (!response.ok) {
+                    throw new Error('Failed to get PDF URL');
+                }
+
+                const data = await response.json();
+                const pdfUrl = data.url;
+                console.log('Loading PDF from:', pdfUrl);
+
+                if (typeof pdfjsLib === 'undefined') {
+                    throw new Error('PDF.js library failed to load');
+                }
+
+                const loadingTask = pdfjsLib.getDocument(pdfUrl);
+                pdfDoc = await loadingTask.promise;
+
+                if (pdfTotalPagesElement) pdfTotalPagesElement.textContent = pdfDoc.numPages;
+                if (pdfCurrentPageElement) pdfCurrentPageElement.textContent = pdfCurrentPage;
+
+                if (pdfPrevBtn) pdfPrevBtn.disabled = false;
+                if (pdfNextBtn) pdfNextBtn.disabled = false;
+
+                readerLoading.style.display = 'none';
+
+                await renderPdfPage(pdfCurrentPage, pdfCanvas, pdfCtx);
+
+                console.log('PDF loaded successfully');
+
+            } catch (error) {
+                console.error('Error loading PDF:', error);
+                if (readerLoading) readerLoading.style.display = 'none';
+                bookReader.innerHTML = `
+                    <div class="alert alert-danger m-3">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Error loading PDF: ${error.message}
+                    </div>
+                    <div class="text-center p-3">
+                        <a href="/Book/Download/@Model.Id" class="btn btn-primary" download>
+                            <i class="bi bi-download"></i> Download Instead
+                        </a>
+                    </div>
+                `;
+            }
+        }
+
+        async function renderPdfPage(pageNum, canvas, ctx) {
+            if (!pdfDoc || pdfRendering) {
+                pdfPageNumPending = pageNum;
+                return;
+            }
+
+            pdfRendering = true;
+            pdfCurrentPage = pageNum;
+
+            const pdfCurrentPageElement = document.getElementById('pdfCurrentPage');
+            const pdfPrevBtn = document.getElementById('pdfPrevBtn');
+            const pdfNextBtn = document.getElementById('pdfNextBtn');
+
+            if (pdfCurrentPageElement) pdfCurrentPageElement.textContent = pageNum;
+            if (pdfPrevBtn) pdfPrevBtn.disabled = (pageNum <= 1);
+            if (pdfNextBtn) pdfNextBtn.disabled = (pageNum >= pdfDoc.numPages);
+
+            try {
+                const page = await pdfDoc.getPage(pageNum);
+                const viewport = page.getViewport({ scale: pdfScale });
+
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                const renderContext = {
+                    canvasContext: ctx,
+                    viewport: viewport
+                };
+
+                await page.render(renderContext).promise;
+            } catch (error) {
+                console.error('Error rendering PDF page:', error);
+            }
+
+            pdfRendering = false;
+
+            if (pdfPageNumPending !== null) {
+                await renderPdfPage(pdfPageNumPending, canvas, ctx);
+                pdfPageNumPending = null;
+            }
+        }
+
+        function pdfPrevPage() {
+            if (pdfCurrentPage > 1) {
+                const canvas = document.querySelector('#bookReader canvas');
+                if (canvas) {
+                    const ctx = canvas.getContext('2d');
+                    renderPdfPage(pdfCurrentPage - 1, canvas, ctx);
+                }
+            }
+        }
+
+        function pdfNextPage() {
+            if (pdfCurrentPage < pdfDoc.numPages) {
+                const canvas = document.querySelector('#bookReader canvas');
+                if (canvas) {
+                    const ctx = canvas.getContext('2d');
+                    renderPdfPage(pdfCurrentPage + 1, canvas, ctx);
+                }
+            }
+        }
+
+        function changePdfZoom() {
+            const zoomSelect = document.getElementById('pdfZoomSelect');
+            if (!zoomSelect || !pdfDoc) return;
+
+            const zoomValue = zoomSelect.value;
+            if (zoomValue === 'auto') {
+                const container = document.getElementById('bookReader');
+                if (container) {
+                    const containerWidth = container.clientWidth - 40; 
+                    const canvas = container.querySelector('canvas');
+                    if (canvas && canvas.width > 0) {
+                        pdfScale = containerWidth / canvas.width;
+                    }
+                }
+            } else {
+                pdfScale = parseInt(zoomValue) / 100;
+            }
+
+            const canvas = document.querySelector('#bookReader canvas');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                renderPdfPage(pdfCurrentPage, canvas, ctx);
+            }
+        }
+
+        function loadScript(src) {
+            return new Promise((resolve, reject) => {
+                if (document.querySelector(`script[src="${src}"]`)) {
+                    resolve();
+                    return;
+                }
+
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+
+        function toggleFullscreen() {
+            const readerSection = document.getElementById('readerSection');
+
+            if (!isFullscreen) {
+                if (readerSection.requestFullscreen) {
+                    readerSection.requestFullscreen();
+                } else if (readerSection.webkitRequestFullscreen) {
+                    readerSection.webkitRequestFullscreen();
+                } else if (readerSection.msRequestFullscreen) {
+                    readerSection.msRequestFullscreen();
+                }
+                readerSection.classList.add('fullscreen');
+                isFullscreen = true;
+            } else {
+                exitFullscreen();
+            }
+        }
+
+        function exitFullscreen() {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+
+            const readerSection = document.getElementById('readerSection');
+            readerSection.classList.remove('fullscreen');
+            isFullscreen = false;
+        }
+
+        function handleFullscreenChange() {
+            const readerSection = document.getElementById('readerSection');
+            if (!document.fullscreenElement && !document.webkitFullscreenElement &&
+                !document.mozFullScreenElement && !document.msFullscreenElement) {
+                readerSection.classList.remove('fullscreen');
+                isFullscreen = false;
+            }
+        }
+
+        function toggleTheme() {
+            const themeToggleBtn = document.getElementById('themeToggleBtn');
+
+            if (!rendition) return;
+
+            isDarkTheme = !isDarkTheme;
+
+            if (isDarkTheme) {
+                themeToggleBtn.innerHTML = '<i class="bi bi-sun"></i>';
+                rendition.themes.select("dark");
+            } else {
+                themeToggleBtn.innerHTML = '<i class="bi bi-moon"></i>';
+                rendition.themes.select("default");
+            }
+        }
+
+        function prevPage() {
+            if (rendition) {
+                rendition.prev();
+            }
+        }
+
+        function nextPage() {
+            if (rendition) {
+                rendition.next();
+            }
+        }
+
+        function changeFontSize() {
+            const fontSizeSelect = document.getElementById('fontSizeSelect');
+            if (fontSizeSelect && rendition) {
+                const fontSize = fontSizeSelect.value;
+                rendition.themes.fontSize(fontSize);
+            }
+        }
+    </script>
+}

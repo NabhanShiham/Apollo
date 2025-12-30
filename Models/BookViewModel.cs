@@ -14,5 +14,8 @@ namespace Apollo.Models
         
         [Display(Name = "Book Cover Photo")]
         public IFormFile? PhotoFile { get; set; }
+
+        [Display(Name = "Book File")]
+        public IFormFile? BookFile { get; set; }
     }    
 }

@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Runtime.CompilerServices;
 using Apollo.Data.Interfaces;
 
 namespace Apollo.Entities
@@ -22,6 +23,7 @@ namespace Apollo.Entities
         public string OwnerId {get; set;} = string.Empty;
         [ForeignKey(nameof(OwnerId))]
         public ApplicationUser? Owner {get; set;}
+        public string FilePath { get; set; } = string.Empty;
     }
 }
 

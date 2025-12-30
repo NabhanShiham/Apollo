@@ -46,6 +46,7 @@ wwwroot\lib\bootstrap\dist\js\bootstrap.js.map
 wwwroot\lib\bootstrap\dist\js\bootstrap.min.js
 wwwroot\lib\bootstrap\dist\js\bootstrap.min.js.map
 wwwroot\lib\bootstrap\LICENSE
+wwwroot\lib\epub-js\epub.min.js
 wwwroot\lib\jquery-validation-unobtrusive\dist\jquery.validate.unobtrusive.js
 wwwroot\lib\jquery-validation-unobtrusive\dist\jquery.validate.unobtrusive.min.js
 wwwroot\lib\jquery-validation-unobtrusive\LICENSE.txt
@@ -61,7 +62,13 @@ wwwroot\lib\jquery\dist\jquery.slim.js
 wwwroot\lib\jquery\dist\jquery.slim.min.js
 wwwroot\lib\jquery\dist\jquery.slim.min.map
 wwwroot\lib\jquery\LICENSE.txt
-wwwroot\uploads\books\af434120-1b1c-4cd7-955b-059c9d8b130a_Screenshot 2025-11-09 161526.png
+wwwroot\lib\pdf.js\pdf.mjs
+wwwroot\lib\pdf.js\pdf.mjs.map
+wwwroot\lib\pdf.js\pdf.worker.mjs
+wwwroot\lib\pdf.js\pdf.worker.mjs.map
+wwwroot\uploads\books\b476f108-cf26-48b4-aefe-ea52412c389c.epub
+wwwroot\uploads\books\f0281776_Yaumiyya_V2_Admin_Handbook.pdf
+wwwroot\uploads\thumbnails\9b6ee81a-44c9-469b-9d46-6746746f58a8.png
 C:\Users\nabha\Documents\NETProjects\Apollo\wwwroot\css\site.css
 C:\Users\nabha\Documents\NETProjects\Apollo\wwwroot\favicon.ico
 C:\Users\nabha\Documents\NETProjects\Apollo\wwwroot\js\site.js
@@ -124,3 +131,8 @@ C:\Users\nabha\Documents\NETProjects\Apollo\wwwroot\lib\jquery\dist\jquery.slim.
 C:\Users\nabha\Documents\NETProjects\Apollo\wwwroot\lib\jquery\dist\jquery.slim.min.js
 C:\Users\nabha\Documents\NETProjects\Apollo\wwwroot\lib\jquery\dist\jquery.slim.min.map
 C:\Users\nabha\Documents\NETProjects\Apollo\wwwroot\lib\jquery\LICENSE.txt
+C:\Users\nabha\Documents\NETProjects\Apollo\wwwroot\lib\epub-js\epub.min.js
+C:\Users\nabha\Documents\NETProjects\Apollo\wwwroot\lib\pdf.js\pdf.mjs
+C:\Users\nabha\Documents\NETProjects\Apollo\wwwroot\lib\pdf.js\pdf.mjs.map
+C:\Users\nabha\Documents\NETProjects\Apollo\wwwroot\lib\pdf.js\pdf.worker.mjs
+C:\Users\nabha\Documents\NETProjects\Apollo\wwwroot\lib\pdf.js\pdf.worker.mjs.map

@@ -292,3 +292,8 @@ C:\Users\nabha\Documents\NETProjects\Apollo\obj\Debug\net10.0\Apollo.pdb
 C:\Users\nabha\Documents\NETProjects\Apollo\obj\Debug\net10.0\Apollo.genruntimeconfig.cache
 C:\Users\nabha\Documents\NETProjects\Apollo\obj\Debug\net10.0\ref\Apollo.dll
 C:\Users\nabha\Documents\NETProjects\Apollo\obj\Debug\net10.0\staticwebassets.upToDateCheck.txt
+C:\Users\nabha\Documents\NETProjects\Apollo\obj\Debug\net10.0\compressed\hlwa2j5x7a-{0}-z1g6qme7zs-z1g6qme7zs.gz
+C:\Users\nabha\Documents\NETProjects\Apollo\obj\Debug\net10.0\compressed\mmo735herk-{0}-btw0utq81e-btw0utq81e.gz
+C:\Users\nabha\Documents\NETProjects\Apollo\obj\Debug\net10.0\compressed\j6h9wmjyqa-{0}-fxa0alfugv-fxa0alfugv.gz
+C:\Users\nabha\Documents\NETProjects\Apollo\obj\Debug\net10.0\compressed\ihpvp87vr9-{0}-rzvu2nu452-rzvu2nu452.gz
+C:\Users\nabha\Documents\NETProjects\Apollo\obj\Debug\net10.0\compressed\ngzj1gn2j2-{0}-j2h1lddq8l-j2h1lddq8l.gz
